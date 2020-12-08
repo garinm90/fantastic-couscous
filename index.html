@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Serial Monitor</title>
+  </head>
+  <body>
+    <h4 style="text-align: center">Monitor</h4><select name="choice" id="baudrate"></select>
+
+    <textarea
+      style="display: block; margin-left: auto; margin-right: auto"
+      id="monitor"
+      name="textarea"
+      rows="20"
+      cols="70"
+    ></textarea>
+    <div style="display: flex; justify-content: center; margin-top: 1rem">
+      <input
+        id="message-value"
+        style="margin-right: 5px"
+        type="text"
+        size="55"
+      />
+      <button id="message-button">Submit</button>
+      <select id="line-selector" name="choice" style="margin-left: 5px">
+        <option value="NL">New Line</option>
+        <option value="CR">Carriage Return</option>
+        <option value="NL+CR" selected>NL + CR</option>
+        <option value="None">No Line Ending</option>
+      </select>
+    </div>
+  </body>
+
+  <script>
+    const gateway = `ws://${window.location.hostname}/ws`;
+    let websocket;
+    let monitor = document.getElementById("monitor");
+    const messageButton = document.getElementById("message-button");
+    messageButton.addEventListener("click", sendMessage);
+    window.addEventListener("load", onLoad);
+    function initWebSocket() {
+      console.log("Trying to open a WebSocket connection...");
+      websocket = new WebSocket(gateway);
+      websocket.onopen = onOpen;
+      websocket.onclose = onClose;
+      websocket.onmessage = onMessage; // <-- add this line
+    }
+    function onOpen(event) {
+      console.log("Connection opened");
+    }
+    function onClose(event) {
+      console.log("Connection closed");
+      setTimeout(initWebSocket, 2000);
+    }
+    function onMessage(event) {
+      // Concatenate any messages into the text field.
+      monitor.value += event.data;
+    }
+    function onLoad(event) {
+      initWebSocket();
+    }
+    function sendMessage(event) {
+      const selector = document.getElementById("line-selector").options
+        .selectedIndex;
+      // Remove any linebreaks the browser might add cause javascript. Then add our line endings for the monitor.
+      let messageValue = document.getElementById("message-value").value;
+      messageValue = messageValue.replace(/(\r\n|\n|\r)/gm, " ");
+      switch (selector) {
+        case 0:
+          messageValue += String.fromCharCode(10);
+          break;
+        case 1:
+          messageValue += String.fromCharCode(13);
+          break;
+        case 2:
+          messageValue += String.fromCharCode(10, 13);
+          break;
+        default:
+          break;
+      }
+
+      websocket.sendMessage(messageValue);
+      monitor.value += "Sent: " + messageValue;
+    }
+  </script>
+</html>
